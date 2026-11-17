@@ -1,0 +1,20 @@
+
+  CommonLibSSE.vcxproj -> D:\a\SkyrimYacht\SkyrimYacht\build\extern\CommonLibSSE-NG\Release\CommonLibSSE.lib
+  cmake_pch.cxx
+  __SkyrimYachtPlugin.cpp
+  Audio.cpp
+  Config.cpp
+  Game.cpp
+  Menu.cpp
+  Overlay.cpp
+  Render3D.cpp
+  Scene.cpp
+  main.cpp
+  Generating Code...
+  StbVorbis.cpp
+  Ai.cpp
+  Dice.cpp
+  Yacht.cpp
+  Generating Code...
+     Creating library D:/a/SkyrimYacht/SkyrimYacht/build/Release/SkyrimYacht.lib and object D:/a/SkyrimYacht/SkyrimYacht/build/Release/SkyrimYacht.exp
+  SkyrimYacht.vcxproj -> D:\a\SkyrimYacht\SkyrimYacht\build\Release\SkyrimYacht.dll
