@@ -22,6 +22,10 @@ jobs:
           ./build/yacht_test
           ./build/ai_test
           ./build/dice_test
+      - name: Translation files match the code
+        run: |
+          python3 tools/make_translations.py
+          git diff --exit-code assets/translations || (echo "Run tools/make_translations.py and commit assets/translations" && exit 1)
       - name: Browser preview
         run: ./preview/build.sh
       - uses: actions/upload-artifact@v4
@@ -162,6 +166,9 @@ jobs:
           Copy-Item -Recurse assets/textures "$out/Data/textures"
           Copy-Item LICENSE.txt "$out/Data/SKSE/Plugins/SkyrimYacht/"
           Copy-Item assets/download/README.txt "$out/Data/SKSE/Plugins/SkyrimYacht/"
+          New-Item -ItemType Directory -Force -Path "$out/Data/Interface/Translations" | Out-Null
+          Copy-Item assets/translations/SkyrimYacht_*.txt "$out/Data/Interface/Translations/"
+          Copy-Item assets/translations/Translating.txt "$out/Data/SKSE/Plugins/SkyrimYacht/"
           Get-ChildItem -Recurse $out | Format-Table FullName, Length
 
       - name: Publish package to dist branch

@@ -1,6 +1,7 @@
 // SkyrimYacht - a dice game for Skyrim Special Edition.
 // Copyright (C) 2026 evodube. GPL-3.0 (LICENSE.txt).
 #include "Game.h"
+#include "Lang.h"
 
 #include "Audio.h"
 #include "Config.h"
@@ -403,6 +404,19 @@ namespace Game
 			{ "Dragonbone", 130, 1500, "Pale dragon bone, fibrous grain, pips stained dark red." },
 			{ "Daedric", 140, 2500, "Black and red, cut with runes, the pips smouldering like coals." },
 		};
+
+		// What the table says, in the player's language (Lang: English is built in)
+		const char* L(std::string_view a_key, const char* a_english) { return Lang::T(a_key, a_english); }
+		const char* DiceName(int a_k) { return L(fmt::format("$YA_Dice{}", kDiceInfo[a_k].name), kDiceInfo[a_k].name); }
+		const char* DiceBlurb(int a_k) { return L(fmt::format("$YA_Dice{}Text", kDiceInfo[a_k].name), kDiceInfo[a_k].blurb); }
+		const char* CupName(const CupInfo& a_c) { return L(fmt::format("$YA_Cup_{}", a_c.id), a_c.name); }
+		const char* CatName(int a_cat)
+		{
+			static constexpr const char* kKeys[] = { "$YA_CatOnes", "$YA_CatTwos", "$YA_CatThrees", "$YA_CatFours", "$YA_CatFives", "$YA_CatSixes",
+				"$YA_CatThreeKind", "$YA_CatFourKind", "$YA_CatFullHouse", "$YA_CatSmallStraight", "$YA_CatLargeStraight", "$YA_CatYacht",
+				"$YA_CatChance" };
+			return a_cat >= 0 && a_cat < 13 ? L(kKeys[a_cat], yacht::CategoryName(a_cat)) : "";
+		}
 		// a cup is yours to play with while you carry one (the plain tankard always is)
 		bool CupUnlocked(int k) { return k == 0 || (k > 0 && k < kNumCups && Scene::OwnsCup(kCups[k].id)); }
 		bool DiceOwned(int k) { return k >= 0 && k < 15 && (k == 0 || (g_ownedDice >> k) & 1u); }
@@ -619,7 +633,7 @@ namespace Game
 		{
 			g_phase = Phase::Redo;
 			g_redoTime = 0;
-			Toast("Off the table! Throw again");
+			Toast(L("$YA_OffTableToast", "Off the table! Throw again"));
 		}
 
 		void FinishRoll()
@@ -662,20 +676,20 @@ namespace Game
 				if (g_gold && Player() && g_betHeld > 0) {
 					Player()->AddObjectToContainer(g_gold, nullptr, g_betHeld * 2, nullptr);
 				}
-				g_payoutText = fmt::format("You take {} septims", g_betHeld * 2);
+				g_payoutText = Lang::F("$YA_PayoutWin", "You take {0} septims", g_betHeld * 2);
 				Ui("coins", 0.9f);
 				if (g_totalWins % 10 == 0 && g_totalWins / 10 < 15) {
-					Toast(fmt::format("Innkeepers now sell {} dice", kDiceInfo[g_totalWins / 10].name));
+					Toast(Lang::F("$YA_NowSelling", "Innkeepers now sell {0} dice", DiceName(g_totalWins / 10)));
 				}
 			} else if (outcome == "draw") {
 				++r.d;
 				if (g_gold && Player() && g_betHeld > 0) {
 					Player()->AddObjectToContainer(g_gold, nullptr, g_betHeld, nullptr);
 				}
-				g_payoutText = fmt::format("Your {} septims come back to you", g_betHeld);
+				g_payoutText = Lang::F("$YA_PayoutDraw", "Your {0} septims come back to you", g_betHeld);
 			} else {
 				++r.l;
-				g_payoutText = fmt::format("{} keeps your {} septims", g_oppName, g_betHeld);
+				g_payoutText = Lang::F("$YA_PayoutLose", "{0} keeps your {1} septims", g_oppName, g_betHeld);
 			}
 			g_betHeld = 0;
 			g_lastScore = outcome == "forfeit" ? 0 : mine;
@@ -805,7 +819,7 @@ namespace Game
 					const int cat = g_ai.ChooseCategory(dice, g_cards[1]);
 					const int pts = g_cards[1].Fill(cat, dice);
 					g_fillAt[1][cat] = g_clock;
-					Toast(fmt::format("{} scores {}: {}", g_oppName, yacht::CategoryName(cat), pts));
+					Toast(Lang::F("$YA_OppScores", "{0} scores {1}: {2}", g_oppName, CatName(cat), pts));
 					Ui("quill");
 					g_npc.step = NpcStep::Done;
 					g_npc.t = 0;
@@ -836,7 +850,7 @@ namespace Game
 			if (pts < 0) {
 				return;
 			}
-			Toast(pts > 0 ? fmt::format("+{}", pts) : "Scratched");
+			Toast(pts > 0 ? fmt::format("+{}", pts) : std::string(L("$YA_Scratched", "Scratched")));
 			Ui("quill");
 			g_phase = Phase::Scored;
 			g_scoredTime = 0;
@@ -863,11 +877,11 @@ namespace Game
 				return;
 			}
 			if (g_rollsUsed >= 3) {
-				Toast("No rolls left");
+				Toast(L("$YA_NoRollsToast", "No rolls left"));
 				return;
 			}
 			if (!ShoutTargets()) {
-				Toast("The board is already clear");
+				Toast(L("$YA_BoardClear", "The board is already clear"));
 				return;
 			}
 			g_shoutAt = g_clock;
@@ -1126,9 +1140,9 @@ namespace Game
 				if (!g_press.moved && dist > 10) {
 					g_press.moved = true;
 					if (DiceOnPad()) {
-						Toast("Put the dice on the pad in the cup or on the rack first");
+						Toast(L("$YA_DiceFirst", "Put the dice on the pad in the cup or on the rack first"));
 					} else if (!AnyInCup()) {
-						Toast("The cup is empty");
+						Toast(L("$YA_CupEmpty", "The cup is empty"));
 					} else {
 						AimCup(mx, my);
 						BeginShake();
@@ -1180,7 +1194,7 @@ namespace Game
 					if (g_phase == Phase::Wager) {
 						const int bet = std::clamp(arg, Config::Get().minBet, Config::Get().maxBet);
 						if (GoldHeld() < bet || !g_gold) {
-							Toast("You don't have that much gold");
+							Toast(L("$YA_NoGold", "You don't have that much gold"));
 							break;
 						}
 						Player()->RemoveItem(g_gold, bet, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
@@ -1236,14 +1250,14 @@ namespace Game
 						const int price = kDiceInfo[arg].gold;
 						if (GoldHeld() < price || !g_gold) {
 							Ui("ui_deny");
-							Toast("You can't afford those");
+							Toast(L("$YA_CantAfford", "You can't afford those"));
 							break;
 						}
 						Player()->RemoveItem(g_gold, price, RE::ITEM_REMOVE_REASON::kRemove, nullptr, nullptr);
 						Ui("coins", 0.7f);
 						g_ownedDice |= 1u << arg;
 						g_diceSel = kDiceSets[arg];
-						Toast(fmt::format("{} dice: yours", kDiceInfo[arg].name));
+						Toast(Lang::F("$YA_BoughtToast", "{0} dice: yours", DiceName(arg)));
 						spdlog::info("Bought {} dice for {}", kDiceInfo[arg].name, price);
 					}
 					break;
@@ -1609,7 +1623,7 @@ namespace Game
 			Scene::RefreshOwnedCups();
 			g_opponent = a_npc->GetHandle();
 			g_oppId = a_npc->GetFormID();
-			g_oppName = a_npc->GetDisplayFullName() ? a_npc->GetDisplayFullName() : "Your opponent";
+			g_oppName = a_npc->GetDisplayFullName() ? a_npc->GetDisplayFullName() : L("$YA_YourOpponent", "Your opponent");
 			g_bet = std::clamp(g_bet, Config::Get().minBet, Config::Get().maxBet);
 			g_cards[0].Clear();
 			g_cards[1].Clear();
@@ -1664,18 +1678,95 @@ namespace Game
 		constexpr ImU32 kRubricC = IM_COL32(142, 47, 27, 255);
 		const ImVec4    kRubric{ 0.557f, 0.184f, 0.106f, 1.0f };
 
+		// The fonts' letters: the ranges handed to ImGui (kept until it builds), each face's key, and the letters each
+		// face has been asked for that it didn't have (so the next build carries them)
+		std::deque<std::vector<ImWchar>>                                g_glyphRanges;
+		std::unordered_map<ImFont*, std::string>                        g_fontKey;
+		std::unordered_map<std::string, std::set<std::uint32_t>>        g_glyphWanted;
+		std::atomic<bool>                                               g_glyphsStale{ false };
+
+		// A face about to draw this text: note any letter it hasn't got (a rebuild follows, with it in)
+		void Need(ImFont* a_f, std::string_view a_s)
+		{
+			if (!a_f) {
+				return;
+			}
+			const auto* p = reinterpret_cast<const unsigned char*>(a_s.data());
+			const auto* e = p + a_s.size();
+			while (p < e) {
+				std::uint32_t c = *p;
+				if (c < 0x80) {
+					++p;
+					continue;
+				}
+				int n = c < 0xE0 ? 1 : c < 0xF0 ? 2 : 3;
+				c = n == 1 ? (c & 0x1F) : n == 2 ? (c & 0x0F) : (c & 0x07);
+				++p;
+				for (; n > 0 && p < e; --n, ++p) {
+					c = (c << 6) | (*p & 0x3F);
+				}
+				if (c > 0xFFFF || c == 0xFEFF || a_f->FindGlyphNoFallback(static_cast<ImWchar>(c))) {
+					continue;
+				}
+				const auto it = g_fontKey.find(a_f);
+				if (it != g_fontKey.end() && g_glyphWanted[it->second].insert(c).second) {
+					g_glyphsStale = true;
+				}
+			}
+		}
 		float S(float a_px) { return a_px * g_ui; }
 		ImU32 Alpha(ImU32 a_col, float a_a)
 		{
 			const int a = static_cast<int>(((a_col >> IM_COL32_A_SHIFT) & 0xFF) * std::clamp(a_a, 0.0f, 1.0f));
 			return (a_col & ~IM_COL32_A_MASK) | (static_cast<ImU32>(a) << IM_COL32_A_SHIFT);
 		}
-		std::string Upper(std::string a_s)
+		// Capitals, by the letter (UTF-8): Latin, accented Latin, Greek and Cyrillic; other scripts (Chinese) have none.
+		std::string Upper(const std::string& a_s)
 		{
-			for (auto& c : a_s) {
-				c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+			std::string out;
+			out.reserve(a_s.size());
+			const auto* p = reinterpret_cast<const unsigned char*>(a_s.data());
+			const auto* e = p + a_s.size();
+			while (p < e) {
+				std::uint32_t c = *p;
+				int           n = c < 0x80 ? 0 : c < 0xE0 ? 1 : c < 0xF0 ? 2 : 3;
+				c = n == 0 ? c : n == 1 ? (c & 0x1F) : n == 2 ? (c & 0x0F) : (c & 0x07);
+				++p;
+				for (; n > 0 && p < e; --n, ++p) {
+					c = (c << 6) | (*p & 0x3F);
+				}
+				if (c >= 'a' && c <= 'z') {
+					c -= 0x20;
+				} else if (c >= 0xE0 && c <= 0xFE && c != 0xF7) {
+					c -= 0x20;  // Latin-1: a-grave .. thorn
+				} else if (c >= 0x100 && c <= 0x17F && (c & 1) && c != 0x131 && c != 0x138 && c != 0x149 && c != 0x17F) {
+					c -= 1;  // Latin Extended-A pairs (Polish, Czech...)
+				} else if (c >= 0x3B1 && c <= 0x3C9 && c != 0x3C2) {
+					c -= 0x20;  // Greek
+				} else if (c >= 0x430 && c <= 0x44F) {
+					c -= 0x20;  // Cyrillic a .. ya
+				} else if (c >= 0x450 && c <= 0x45F) {
+					c -= 0x50;  // Cyrillic io, dje...
+				} else if (c >= 0x460 && c <= 0x4FF && (c & 1)) {
+					c -= 1;
+				}
+				if (c < 0x80) {
+					out += static_cast<char>(c);
+				} else if (c < 0x800) {
+					out += static_cast<char>(0xC0 | (c >> 6));
+					out += static_cast<char>(0x80 | (c & 0x3F));
+				} else if (c < 0x10000) {
+					out += static_cast<char>(0xE0 | (c >> 12));
+					out += static_cast<char>(0x80 | ((c >> 6) & 0x3F));
+					out += static_cast<char>(0x80 | (c & 0x3F));
+				} else {
+					out += static_cast<char>(0xF0 | (c >> 18));
+					out += static_cast<char>(0x80 | ((c >> 12) & 0x3F));
+					out += static_cast<char>(0x80 | ((c >> 6) & 0x3F));
+					out += static_cast<char>(0x80 | (c & 0x3F));
+				}
 			}
-			return a_s;
+			return out;
 		}
 		double Now() { return ImGui::GetTime(); }
 
@@ -1685,6 +1776,7 @@ namespace Game
 			if (!a_f) {
 				return 0.0f;
 			}
+			Need(a_f, a_s);
 			const float size = a_f->FontSize;
 			float       w = 0.0f;
 			const char* p = a_s.c_str();
@@ -1702,6 +1794,7 @@ namespace Game
 			if (!a_f) {
 				return 0.0f;
 			}
+			Need(a_f, a_s);
 			const float size = a_f->FontSize;
 			float       x = a_pos.x;
 			const char* p = a_s.c_str();
@@ -1893,7 +1986,7 @@ namespace Game
 			cap(b.x - 1, -1);
 			// whose turn: the letters settle in as the turn changes
 			const bool        over = g_phase == Phase::Over;
-			const std::string t = Upper(over ? "Game over" : g_turn == 0 ? "Your turn" : g_oppName);
+			const std::string t = Upper(over ? std::string(L("$YA_TurnOver", "Game over")) : g_turn == 0 ? std::string(L("$YA_YourTurn", "Your turn")) : g_oppName);
 			const float       k = static_cast<float>(std::clamp((g_clock - g_turnAt) / 0.8, 0.0, 1.0));
 			const float       ease = 1.0f - std::pow(1.0f - k, 3.0f);
 			const float       track = 0.7f - (0.7f - 0.32f) * ease;
@@ -1919,7 +2012,7 @@ namespace Game
 					kFrost, kFrost, IM_COL32(143, 180, 232, 255));
 			}
 			// the stake, small, under it
-			TextC(dl, F.tiny, cx, my + S(10), kGrey, Upper(fmt::format("Wager {} septims", g_bet)), 0.3f, 0.8f);
+			TextC(dl, F.tiny, cx, my + S(10), kGrey, Upper(Lang::F("$YA_WagerTop", "Wager {0} septims", g_bet)), 0.3f, 0.8f);
 		}
 
 		// The words of power, each appearing as it's spoken.
@@ -1968,20 +2061,20 @@ namespace Game
 			std::string hint;
 			bool        waiting = false;
 			if (g_turn == 1 && g_phase != Phase::Over) {
-				hint = g_oppName + " is playing";
+				hint = Lang::F("$YA_HintOpp", "{0} is playing", g_oppName);
 				waiting = true;
 			} else if (g_phase == Phase::Ready) {
-				hint = "Hold the left button and move to shake the cup. Let go to throw.";
+				hint = L("$YA_HintReady", "Hold the left button and move to shake the cup. Let go to throw.");
 			} else if (g_phase == Phase::Shaking) {
-				hint = "Shake it, then let go: it tips the way you last moved.";
+				hint = L("$YA_HintShake", "Shake it, then let go: it tips the way you last moved.");
 			} else if (g_phase == Phase::Pouring || g_phase == Phase::Rolling) {
-				hint = "Rolling";
+				hint = L("$YA_HintRolling", "Rolling");
 				waiting = true;
 			} else if (g_phase == Phase::Redo) {
-				hint = "Off the table. Throw again.";
+				hint = L("$YA_HintRedo", "Off the table. Throw again.");
 			} else if (g_phase == Phase::Choose) {
-				hint = g_rollsUsed < 3 ? "Click a die to keep it. Drag dice into the cup to roll again, or pick a box on your card."
-				                       : "No rolls left. Pick a box on your card.";
+				hint = g_rollsUsed < 3 ? L("$YA_HintChoose", "Click a die to keep it. Drag dice into the cup to roll again, or pick a box on your card.")
+				                       : L("$YA_HintNoRolls", "No rolls left. Pick a box on your card.");
 			}
 			if (hint.empty()) {
 				return;
@@ -2071,13 +2164,13 @@ namespace Game
 			float       y = pos.y + padY;
 			const float x0 = pos.x + padX, x1 = pos.x + w - padX;
 			// head: who, and the total
-			Text(dl, F.bookSC, ImVec2(x0, y + S(6)), inkC, a_card == 0 ? "Yours" : g_oppName, 0.04f);
+			Text(dl, F.bookSC, ImVec2(x0, y + S(6)), inkC, a_card == 0 ? std::string(L("$YA_CardYours", "Yours")) : g_oppName, 0.04f);
 			const std::string tot = std::to_string(g_cards[a_card].Total());
 			Text(dl, F.handBig, ImVec2(x1 - Measure(F.handBig, tot, 0), y - S(4)), inkC, tot);
 			y += S(36);
 			const auto& r = g_records[g_oppId];
 			const int   won = a_card == 0 ? r.w : r.l, lost = a_card == 0 ? r.l : r.w;
-			Text(dl, F.bookIt, ImVec2(x0, y), softC, fmt::format("Record {}-{}{}", won, lost, r.d ? fmt::format(", {} drawn", r.d) : ""));
+			Text(dl, F.bookIt, ImVec2(x0, y), softC, Lang::F("$YA_Record", "Record {0}-{1}{2}", won, lost, r.d ? Lang::F("$YA_Drawn", ", {0} drawn", r.d) : std::string()));
 			y += S(26);
 			// two columns: the upper section with its bonus, the lower with the yacht bonuses
 			const float colGap = S(22), cw0 = (w - padX * 2 - colGap) / 2.18f, cw1 = cw0 * 1.18f;
@@ -2109,7 +2202,7 @@ namespace Game
                     for (float dx = ra.x + S(6); dx < rb.x; dx += S(3)) {
                         dl->AddRectFilled(ImVec2(dx, rb.y - S(2)), ImVec2(dx + 1, rb.y - S(1)), Alpha(kInkC, 0.35f * ink));
                     }
-                    Text(dl, F.book, ImVec2(ra.x + S(10), ra.y + (rowH - F.book->FontSize) * 0.5f), filled ? softC : inkC, yacht::CategoryName(cat));
+                    Text(dl, F.book, ImVec2(ra.x + S(10), ra.y + (rowH - F.book->FontSize) * 0.5f), filled ? softC : inkC, CatName(cat));
                     std::string val;
                     ImU32       vc = inkC;
                     if (filled) {
@@ -2132,16 +2225,16 @@ namespace Game
                 }
                 return yy;
 			};
-			const float yu = column(x0, cw0, yacht::kOnes, yacht::kSixes, "Upper");
-			const float yl = column(x0 + cw0 + colGap, cw1, yacht::kThreeKind, yacht::kChance, "Lower");
+			const float yu = column(x0, cw0, yacht::kOnes, yacht::kSixes, L("$YA_CardUpper", "Upper"));
+			const float yl = column(x0 + cw0 + colGap, cw1, yacht::kThreeKind, yacht::kChance, L("$YA_CardLower", "Lower"));
 			// the sums underneath
 			const auto& card = g_cards[a_card];
 			const float sy = (std::max)(yu, yl) + S(4);
-			Text(dl, F.bookIt, ImVec2(x0 + S(10), sy), softC, "Bonus 35 at 63");
+			Text(dl, F.bookIt, ImVec2(x0 + S(10), sy), softC, L("$YA_CardBonus", "Bonus 35 at 63"));
 			const std::string up = fmt::format("{} / 63", card.UpperSum());
 			Text(dl, F.bookIt, ImVec2(x0 + cw0 - S(2) - Measure(F.bookIt, up, 0), sy), softC, up);
 			const float lx = x0 + cw0 + colGap;
-			Text(dl, F.bookIt, ImVec2(lx + S(10), sy), softC, "Yacht bonuses");
+			Text(dl, F.bookIt, ImVec2(lx + S(10), sy), softC, L("$YA_CardYachtBonus", "Yacht bonuses"));
 			const std::string yb = std::to_string(card.yachtBonuses * yacht::kYachtBonus);
 			Text(dl, F.bookIt, ImVec2(lx + cw1 - S(2) - Measure(F.bookIt, yb, 0), sy), softC, yb);
 			ImGui::End();
@@ -2161,10 +2254,10 @@ namespace Game
 			const bool canShout = CanShout() && ShoutTargets();
 			const bool pad = Overlay::UsingPad();  // a controller: its buttons
 			const Key  keys[4] = {
-                { pad ? "Y" : "Z", "Fus Ro Dah", IM_COL32(185, 205, 234, 255), IM_COL32(255, 255, 255, 255), canShout, 0 },
-                { pad ? "X" : "H", "How to play", kGrey, kWhite, true, 1 },
-                { pad ? "Back" : "M", Audio::Muted() ? "Muted" : "Sound", kGrey, kWhite, true, 2 },
-                { pad ? "B" : "Tab", "Forfeit", kGrey, IM_COL32(240, 182, 166, 255), g_phase != Phase::Over, 3 },
+                { pad ? "Y" : "Z", L("$YA_KeyShout", "Fus Ro Dah"), IM_COL32(185, 205, 234, 255), IM_COL32(255, 255, 255, 255), canShout, 0 },
+                { pad ? "X" : "H", L("$YA_KeyHelp", "How to play"), kGrey, kWhite, true, 1 },
+                { pad ? "Back" : "M", Audio::Muted() ? L("$YA_KeyMuted", "Muted") : L("$YA_KeySound", "Sound"), kGrey, kWhite, true, 2 },
+                { pad ? "B" : "Tab", L("$YA_KeyForfeit", "Forfeit"), kGrey, IM_COL32(240, 182, 166, 255), g_phase != Phase::Over, 3 },
 			};
 			float widths[4], total = 0;
 			for (int k = 0; k < 4; ++k) {
@@ -2242,7 +2335,7 @@ namespace Game
 			// a little pointer down to the key
 			const float px = std::clamp(g_soundKey.x, x + S(20), x + w - S(20));
 			dl->AddTriangleFilled(ImVec2(px - S(9), y + h), ImVec2(px + S(9), y + h), ImVec2(px, y + h + S(9)), IM_COL32(0, 0, 0, 199));
-			TextC(dl, F.sansSemi, x + w * 0.5f, y + padY, kWhite, "SOUND", 0.3f);
+			TextC(dl, F.sansSemi, x + w * 0.5f, y + padY, kWhite, Upper(L("$YA_SoundTitle", "Sound")), 0.3f);
 			struct Row
 			{
 				const char* id;
@@ -2252,10 +2345,10 @@ namespace Game
 				ImU32       tint;
 			};
 			const Row rows[4] = {
-				{ "music", "Music", &v.musicVolume, 1.0f, IM_COL32(222, 196, 140, 255) },
-				{ "dice", "Dice & cups", &v.volume, 2.0f, kWhite },
-				{ "shout", "Fus Ro Dah", &v.shoutVolume, 2.0f, IM_COL32(185, 205, 234, 255) },
-				{ "effects", "Effects", &v.effectsVolume, 2.0f, kGrey },
+				{ "music", L("$YA_SoundMusic", "Music"), &v.musicVolume, 1.0f, IM_COL32(222, 196, 140, 255) },
+				{ "dice", L("$YA_SoundDice", "Dice & cups"), &v.volume, 2.0f, kWhite },
+				{ "shout", L("$YA_KeyShout", "Fus Ro Dah"), &v.shoutVolume, 2.0f, IM_COL32(185, 205, 234, 255) },
+				{ "effects", L("$YA_SoundEffects", "Effects"), &v.effectsVolume, 2.0f, kGrey },
 			};
 			const bool muted = Audio::Muted();
 			float      ry = y + padY + S(34);
@@ -2290,7 +2383,7 @@ namespace Game
 			}
 			// mute everything, or not
 			{
-				const std::string lbl = muted ? "UNMUTE" : "MUTE ALL";
+				const std::string lbl = Upper(muted ? L("$YA_SoundUnmute", "Unmute") : L("$YA_SoundMuteAll", "Mute all"));
 				bool              hov = false;
 				const float       bw = Measure(F.sans, lbl, 0.16f) + S(24), by = y + h - padY - S(22);
 				if (Clicked("mute", ImVec2(x + w * 0.5f - bw * 0.5f, by - S(4)), ImVec2(x + w * 0.5f + bw * 0.5f, by + S(22)), &hov)) {
@@ -2335,6 +2428,7 @@ namespace Game
 		// Word-wrapped grey text inside a box, returns the height used
 		float Para(ImDrawList* dl, ImFont* f, float x, float y, float wrap, ImU32 col, const std::string& s)
 		{
+			Need(f, s);
 			const ImVec2 sz = f->CalcTextSizeA(f->FontSize, FLT_MAX, wrap, s.c_str());
 			dl->AddText(f, f->FontSize, ImVec2(x, y), col, s.c_str(), nullptr, wrap);
 			return sz.y;
@@ -2347,12 +2441,12 @@ namespace Game
 			BeginArea("##help", ImVec2(x, y), ImVec2(w, h));
 			auto* dl = ImGui::GetWindowDrawList();
 			MsgBox(dl, ImVec2(x, y), ImVec2(x + w, y + h));
-			TextC(dl, F.menu, W * 0.5f, y + S(22), kWhite, "YACHT", 0.26f);
+			TextC(dl, F.menu, W * 0.5f, y + S(22), kWhite, Upper(L("$YA_HelpTitle", "Yacht")), 0.26f);
 			float yy = y + S(64);
 			const float px = x + S(32), pw = w - S(64);
-			yy += Para(dl, F.sans, px, yy, pw, kGrey, "Hold the left button and move to lift the cup and shake it. Let go to flick the dice out the way you last moved. A die that leaves the board means throw again.") + S(9);
-			yy += Para(dl, F.sans, px, yy, pw, kGrey, "Click a die to set it on the rack. Drag one back into the cup to roll it again. The cup waits until the board is clear.") + S(9);
-			yy += Para(dl, F.sans, px, yy, pw, kGrey, "Any cup you carry can be your cup at the table. Every ten wins, innkeepers sell you a finer set of dice.");
+			yy += Para(dl, F.sans, px, yy, pw, kGrey, L("$YA_Help1", "Hold the left button and move to lift the cup and shake it. Let go to flick the dice out the way you last moved. A die that leaves the board means throw again.")) + S(9);
+			yy += Para(dl, F.sans, px, yy, pw, kGrey, L("$YA_Help2", "Click a die to set it on the rack. Drag one back into the cup to roll it again. The cup waits until the board is clear.")) + S(9);
+			yy += Para(dl, F.sans, px, yy, pw, kGrey, L("$YA_Help3", "Any cup you carry can be your cup at the table. Every ten wins, innkeepers sell you a finer set of dice."));
 			ImGui::End();
 		}
 
@@ -2374,9 +2468,9 @@ namespace Game
 					Alpha(kWhite, 0.62f));
 				y += S(30);
 			};
-			line("CUP", cup.name);
+			line(L("$YA_LabelCup", "CUP"), CupName(cup));
 			const int di = (std::max)(0, DiceIndex(PlayerDice()));
-			line("DICE", kDiceInfo[di].name);
+			line(L("$YA_LabelDice", "DICE"), DiceName(di));
 		}
 
 		void DrawPlay()
@@ -2410,9 +2504,9 @@ namespace Game
 				BeginArea("##forfeit", ImVec2(x, y), ImVec2(w, h));
 				auto* dl = ImGui::GetWindowDrawList();
 				MsgBox(dl, ImVec2(x, y), ImVec2(x + w, y + h));
-				TextC(dl, F.menu, W * 0.5f, y + S(24), kWhite, "FORFEIT THIS GAME?", 0.26f);
-				TextC(dl, F.tiny, W * 0.5f, y + S(62), kGrey, Upper(fmt::format("It counts as a loss. {} keeps your {} septims", g_oppName, g_betHeld)), 0.2f);
-				switch (MenuButtons("fb", { { "Forfeit", true }, { "Keep playing", false } }, W * 0.5f, y + S(100))) {
+				TextC(dl, F.menu, W * 0.5f, y + S(24), kWhite, Upper(L("$YA_ForfeitAsk", "Forfeit this game?")), 0.26f);
+				TextC(dl, F.tiny, W * 0.5f, y + S(62), kGrey, Upper(Lang::F("$YA_ForfeitNote", "It counts as a loss. {0} keeps your {1} septims", g_oppName, g_betHeld)), 0.2f);
+				switch (MenuButtons("fb", { { L("$YA_KeyForfeit", "Forfeit"), true }, { L("$YA_KeepPlaying", "Keep playing"), false } }, W * 0.5f, y + S(100))) {
 				case 0:
 					Post(UiAct::ForfeitYes);
 					break;
@@ -2502,7 +2596,7 @@ namespace Game
 			const int   top = std::clamp(gold - gold % 5, cfg.minBet, cfg.maxBet);
 			const int   bet = std::clamp(g_bet, cfg.minBet, top);
 			float       yy = y;
-			TextC(dl, F.tiny, cx, yy, kGrey, Upper(fmt::format("A game of Yacht with {}", g_oppName)), 0.6f, 0.8f);
+			TextC(dl, F.tiny, cx, yy, kGrey, Upper(Lang::F("$YA_WagerWith", "A game of Yacht with {0}", g_oppName)), 0.6f, 0.8f);
 			yy += S(30);
 			// the stake, large, with arrows either side
 			const std::string stake = fmt::format("{}", bet);
@@ -2523,9 +2617,9 @@ namespace Game
 			tri(cx - sw * 0.5f - S(55), -1, h0, bet > cfg.minBet);
 			tri(cx + sw * 0.5f + S(55), 1, h1, bet < top);
 			yy += F.titleMid->FontSize + S(6);
-			TextC(dl, F.tiny, cx, yy, kGrey, Upper(fmt::format("Septims wagered. Win and you take {}", bet * 2)), 0.34f, 0.8f);
+			TextC(dl, F.tiny, cx, yy, kGrey, Upper(Lang::F("$YA_WagerNote", "Septims wagered. Win and you take {0}", bet * 2)), 0.34f, 0.8f);
 			yy += S(22);
-			TextC(dl, F.tiny, cx, yy, kDimC, Upper(fmt::format("Your purse: {} septims", gold)), 0.34f, 0.8f);
+			TextC(dl, F.tiny, cx, yy, kDimC, Upper(Lang::F("$YA_Purse", "Your purse: {0} septims", gold)), 0.34f, 0.8f);
 			yy += S(34);
 			DiamondRule(dl, cx, yy, S(560));
 			yy += S(28);
@@ -2536,22 +2630,23 @@ namespace Game
 					cupIdx = k;
 				}
 			}
-			Chooser(dl, "cup", cx, yy, S(520), "CUP", kCups[cupIdx].name, cupIdx, kNumCups,
+			Chooser(dl, "cup", cx, yy, S(520), L("$YA_LabelCup", "CUP"), CupName(kCups[cupIdx]), cupIdx, kNumCups,
 				[](int k) { return CupUnlocked(k); }, UiAct::ChooseCup);
 			yy += S(40);
 			const int diceIdx = (std::max)(0, DiceIndex(PlayerDice()));
-			Chooser(dl, "dice", cx, yy, S(520), "DICE", kDiceInfo[diceIdx].name, diceIdx, 15, [](int k) { return DiceOwned(k); }, UiAct::ChooseDice);
+			Chooser(dl, "dice", cx, yy, S(520), L("$YA_LabelDice", "DICE"), DiceName(diceIdx), diceIdx, 15, [](int k) { return DiceOwned(k); }, UiAct::ChooseDice);
 			yy += S(40);
 			// the item card: what these dice are
 			FadeRule(dl, cx - S(260), cx + S(260), yy);
 			yy += S(10);
-			const ImVec2 bsz = F.sans->CalcTextSizeA(F.sans->FontSize, FLT_MAX, S(480), kDiceInfo[diceIdx].blurb);
-			dl->AddText(F.sans, F.sans->FontSize, ImVec2(cx - bsz.x * 0.5f, yy), kGrey, kDiceInfo[diceIdx].blurb, nullptr, S(480));
+			Need(F.sans, DiceBlurb(diceIdx));
+			const ImVec2 bsz = F.sans->CalcTextSizeA(F.sans->FontSize, FLT_MAX, S(480), DiceBlurb(diceIdx));
+			dl->AddText(F.sans, F.sans->FontSize, ImVec2(cx - bsz.x * 0.5f, yy), kGrey, DiceBlurb(diceIdx), nullptr, S(480));
 			yy += bsz.y + S(10);
 			FadeRule(dl, cx - S(260), cx + S(260), yy);
 			yy += S(12);
 			yy += S(34);
-			switch (MenuButtons("wb", { { "Place bet", false }, { "Leave", false } }, cx, yy)) {
+			switch (MenuButtons("wb", { { L("$YA_PlaceBet", "Place bet"), false }, { L("$YA_Leave", "Leave"), false } }, cx, yy)) {
 			case 0:
 				Post(UiAct::PlaceBet, bet);
 				break;
@@ -2580,11 +2675,11 @@ namespace Game
 			BeginArea("##shop", ImVec2(x, y), ImVec2(w, h));
 			auto* dl = ImGui::GetWindowDrawList();
 			float yy = y;
-			TextC(dl, F.tiny, cx, yy, kGrey, Upper(fmt::format("{}'s stock", g_shopName)), 0.6f, 0.8f);
+			TextC(dl, F.tiny, cx, yy, kGrey, Upper(Lang::F("$YA_ShopStock", "{0}'s stock", g_shopName)), 0.6f, 0.8f);
 			yy += S(26);
-			TextC(dl, F.title, cx, yy, IM_COL32(255, 255, 255, 255), "DICE", 0.16f, 0.9f);
+			TextC(dl, F.title, cx, yy, IM_COL32(255, 255, 255, 255), Upper(L("$YA_ShopTitle", "Dice")), 0.16f, 0.9f);
 			yy += F.title->FontSize + S(4);
-			TextC(dl, F.tiny, cx, yy, kGrey, Upper(fmt::format("Your purse: {} septims  -  {} wins", GoldHeld(), g_totalWins)), 0.34f, 0.8f);
+			TextC(dl, F.tiny, cx, yy, kGrey, Upper(Lang::F("$YA_ShopPurse", "Your purse: {0} septims  -  {1} wins", GoldHeld(), g_totalWins)), 0.34f, 0.8f);
 			yy += S(30);
 			DiamondRule(dl, cx, yy, S(760));
 			yy += S(18);
@@ -2617,8 +2712,8 @@ namespace Game
 					dl->AddTriangleFilled(ImVec2(ra.x + S(2), ra.y + rowH * 0.5f - S(4)), ImVec2(ra.x + S(8), ra.y + rowH * 0.5f), ImVec2(ra.x + S(2), ra.y + rowH * 0.5f + S(4)),
 						kWhite);
 				}
-				Text(dl, F.sans, ImVec2(ra.x + S(16), ra.y + (rowH - F.sans->FontSize) * 0.5f), col, Upper(d.name), 0.08f, 0.7f);
-				const std::string tag = inUse == kDiceSets[k] ? "In use" : owned ? "Owned" : sale ? fmt::format("{} septims", d.gold) : fmt::format("{} wins", d.wins);
+				Text(dl, F.sans, ImVec2(ra.x + S(16), ra.y + (rowH - F.sans->FontSize) * 0.5f), col, Upper(DiceName(k)), 0.08f, 0.7f);
+				const std::string tag = inUse == kDiceSets[k] ? std::string(L("$YA_ShopInUse", "In use")) : owned ? std::string(L("$YA_ShopOwned", "Owned")) : sale ? Lang::F("$YA_ShopPrice", "{0} septims", d.gold) : Lang::F("$YA_ShopWins", "{0} wins", d.wins);
 				const ImU32 tc = inUse == kDiceSets[k] ? kWhite : sale ? IM_COL32(230, 200, 140, 255) : kDimC;
 				Text(dl, F.tiny, ImVec2(rb.x - S(8) - Measure(F.tiny, Upper(tag), 0.14f), ra.y + (rowH - F.tiny->FontSize) * 0.5f), tc, Upper(tag), 0.14f);
 			}
@@ -2627,42 +2722,43 @@ namespace Game
 			const auto& d = kDiceInfo[k];
 			const float rx0 = cx + S(50), rx1 = x + w - S(30), rcx = (rx0 + rx1) * 0.5f;
 			float       ry = yy + S(30);
-			TextC(dl, F.turn, rcx, ry, kWhite, Upper(d.name), 0.16f, 0.8f);
+			TextC(dl, F.turn, rcx, ry, kWhite, Upper(DiceName(k)), 0.16f, 0.8f);
 			ry += F.turn->FontSize + S(10);
 			FadeRule(dl, rx0, rx1, ry);
 			ry += S(10);
-			const std::string stats = k == 0 ? "STARTING DICE" : fmt::format("PRICE  {}     WINS  {}", d.gold, d.wins);
+			const std::string stats = Upper(k == 0 ? std::string(L("$YA_ShopStarting", "Starting dice")) : Lang::F("$YA_ShopStats", "Price  {0}     Wins  {1}", d.gold, d.wins));
 			TextC(dl, F.tiny, rcx, ry, kGrey, stats, 0.22f);
 			ry += S(26);
-			const ImVec2 bsz = F.sans->CalcTextSizeA(F.sans->FontSize, FLT_MAX, rx1 - rx0 - S(20), d.blurb);
-			dl->AddText(F.sans, F.sans->FontSize, ImVec2(rcx - bsz.x * 0.5f, ry), kGrey, d.blurb, nullptr, rx1 - rx0 - S(20));
+			Need(F.sans, DiceBlurb(k));
+			const ImVec2 bsz = F.sans->CalcTextSizeA(F.sans->FontSize, FLT_MAX, rx1 - rx0 - S(20), DiceBlurb(k));
+			dl->AddText(F.sans, F.sans->FontSize, ImVec2(rcx - bsz.x * 0.5f, ry), kGrey, DiceBlurb(k), nullptr, rx1 - rx0 - S(20));
 			ry += bsz.y + S(12);
 			FadeRule(dl, rx0, rx1, ry);
 			ry += S(24);
 			const bool owned = DiceOwned(k), sale = DiceOnSale(k);
 			if (owned && inUse != kDiceSets[k]) {
-				if (MenuButton("use", "Use these", rcx, ry)) {
+				if (MenuButton("use", L("$YA_ShopUse", "Use these"), rcx, ry)) {
 					Post(UiAct::ChooseDice, k);
 				}
 			} else if (sale) {
 				const bool afford = GoldHeld() >= d.gold;
-				if (MenuButton("buy", fmt::format("Buy  {}", d.gold), rcx, ry, false, afford)) {
+				if (MenuButton("buy", Lang::F("$YA_ShopBuy", "Buy  {0}", d.gold), rcx, ry, false, afford)) {
 					Post(UiAct::BuyDice, k);
 				}
 				if (!afford) {
-					TextC(dl, F.tiny, rcx, ry + S(48), IM_COL32(240, 182, 166, 255), "NOT ENOUGH GOLD", 0.22f);
+					TextC(dl, F.tiny, rcx, ry + S(48), IM_COL32(240, 182, 166, 255), Upper(L("$YA_ShopNoGold", "Not enough gold")), 0.22f);
 				}
 			} else if (!owned) {
-				TextC(dl, F.tiny, rcx, ry + S(8), kDimC, Upper(fmt::format("For sale after {} wins", d.wins)), 0.22f);
+				TextC(dl, F.tiny, rcx, ry + S(8), kDimC, Upper(Lang::F("$YA_ShopAfter", "For sale after {0} wins", d.wins)), 0.22f);
 			} else {
-				TextC(dl, F.tiny, rcx, ry + S(8), kGrey, "THE DICE YOU PLAY WITH", 0.22f);
+				TextC(dl, F.tiny, rcx, ry + S(8), kGrey, Upper(L("$YA_ShopYours", "The dice you play with")), 0.22f);
 			}
 			if (!g_toast.empty() && g_clock - g_toastTime < 2.2) {
 				TextC(dl, F.sans, rcx, ry + S(80), kWhite, Upper(g_toast), 0.14f, 0.9f);
 			}
 			// done
 			const float by = yy + 15 * rowH + S(26);
-			if (MenuButton("done", "Done", cx, by)) {
+			if (MenuButton("done", L("$YA_ShopDone", "Done"), cx, by)) {
 				Post(UiAct::CloseShop);
 			}
 			ImGui::End();
@@ -2680,9 +2776,9 @@ namespace Game
 			auto*       dl = ImGui::GetWindowDrawList();
 			const bool  win = g_outcome == "win";
 			const bool  lose = g_outcome == "lose" || g_outcome == "forfeit";
-			const char* title = win ? "YOU WIN" : g_outcome == "draw" ? "A DRAW" : g_outcome == "forfeit" ? "FORFEIT" : "YOU LOSE";
+			const std::string title = Upper(win ? L("$YA_OverWin", "You win") : g_outcome == "draw" ? L("$YA_OverDraw", "A draw") : g_outcome == "forfeit" ? L("$YA_OverForfeit", "Forfeit") : L("$YA_OverLose", "You lose"));
 			float       yy = y;
-			TextC(dl, F.tiny, cx, yy, kGrey, "GAME OVER", 0.6f, 0.8f);
+			TextC(dl, F.tiny, cx, yy, kGrey, Upper(L("$YA_OverTitle", "Game over")), 0.6f, 0.8f);
 			yy += S(26);
 			const ImU32 tc = lose ? IM_COL32(240, 195, 182, 255) : IM_COL32(255, 255, 255, 255);
 			const float tw = Measure(F.title, title, 0.16f) - 0.16f * F.title->FontSize;
@@ -2699,11 +2795,11 @@ namespace Game
 			yy += S(24);
 			const auto& r = g_records[g_oppId];
 			TextC(dl, F.tiny, cx, yy, kGrey,
-				Upper(fmt::format("Your record against {}: {}-{}{}", g_oppName, r.w, r.l, r.d ? fmt::format(", {} drawn", r.d) : "")), 0.34f, 0.8f);
+				Upper(Lang::F("$YA_OverRecord", "Your record against {0}: {1}-{2}{3}", g_oppName, r.w, r.l, r.d ? Lang::F("$YA_Drawn", ", {0} drawn", r.d) : std::string())), 0.34f, 0.8f);
 			yy += S(24);
-			TextC(dl, F.tiny, cx, yy, kDimC, Upper(fmt::format("Your cup: the {}", PlayerCup().name)), 0.34f, 0.8f);
+			TextC(dl, F.tiny, cx, yy, kDimC, Upper(Lang::F("$YA_OverCup", "Your cup: the {0}", CupName(PlayerCup()))), 0.34f, 0.8f);
 			yy += S(44);
-			switch (MenuButtons("ob", { { "Rematch", false }, { "Leave", false } }, cx, yy)) {
+			switch (MenuButtons("ob", { { L("$YA_Rematch", "Rematch"), false }, { L("$YA_Leave", "Leave"), false } }, cx, yy)) {
 			case 0:
 				Post(UiAct::Rematch);
 				break;
@@ -2963,7 +3059,7 @@ namespace Game
 				}
 				g_ownedDice |= 1u << k;
 				g_diceSel = kDiceSets[k];
-				RE::SendHUDMessage::ShowHUDMessage(fmt::format("{} dice: yours. You'll play with them at the next table.", kDiceInfo[k].name).c_str());
+				RE::SendHUDMessage::ShowHUDMessage(Lang::F("$YA_BoughtHud", "{0} dice: yours. You'll play with them at the next table.", DiceName(k)).c_str());
 				spdlog::info("Bought {} dice", kDiceInfo[k].name);
 			}
 		}
@@ -2972,6 +3068,7 @@ namespace Game
 	// ==================================================================== public
 	void OnDataLoaded()
 	{
+		Lang::Load();  // the game's language is known by now
 		auto* dh = RE::TESDataHandler::GetSingleton();
 		g_faction = dh->LookupForm<RE::TESFaction>(EspIds::kTableFaction, EspIds::kPlugin);
 		g_canAfford = dh->LookupForm<RE::TESGlobal>(EspIds::kCanAfford, EspIds::kPlugin);
@@ -3114,7 +3211,7 @@ namespace Game
 			std::lock_guard lk(g_mtx);
 			if (!Scene::IsOpen()) {
 				auto* keeper = RE::TESForm::LookupByID<RE::Actor>(id);
-				g_shopName = keeper && keeper->GetDisplayFullName() ? keeper->GetDisplayFullName() : "The innkeeper";
+				g_shopName = keeper && keeper->GetDisplayFullName() ? keeper->GetDisplayFullName() : L("$YA_Innkeeper", "The innkeeper");
 				g_phase = Phase::Shop;
 				g_shopSel = -1;
 				Scene::Open(false);
@@ -3250,6 +3347,8 @@ namespace Game
 		CloseGame();
 	}
 
+	bool GlyphsWanted() { return g_glyphsStale.exchange(false); }
+
 	void SetupUi(float a_screenH)
 	{
 		g_ui = (std::max)(0.6f, a_screenH / 1080.0f) * Config::Get().uiScale;
@@ -3259,7 +3358,28 @@ namespace Game
 		const std::string ours = "Data\\SKSE\\Plugins\\SkyrimYacht\\Fonts\\";
 		const std::string sys = std::string(windir) + "\\Fonts\\";
 		std::error_code   ec;
-		static const ImWchar kCaps[] = { 0x0020, 0x007E, 0 };  // the huge display faces only need plain ASCII
+		// What every face carries: Latin (accents, Polish, Czech...), Greek, Cyrillic and the punctuation. Our faces are
+		// Latin only, so the rest comes from a Windows face merged in behind each (Arial Narrow, Georgia). Any other
+		// letter the table is asked to draw (a Chinese translation, an opponent's name) is added as it turns up: from
+		// the translation's own font if it names one, then Windows' Chinese, Japanese and Korean faces.
+		static const ImWchar kLatin[] = { 0x0020, 0x00FF, 0x2010, 0x205E, 0x20AC, 0x20AC, 0x2122, 0x2122, 0 };
+		static const ImWchar kWide[] = { 0x0100, 0x024F, 0x0370, 0x03FF, 0x0400, 0x052F, 0x1E00, 0x1EFF, 0 };
+		static const ImWchar kCaps[] = { 0x0020, 0x007E, 0x00C0, 0x00DE, 0x0410, 0x042F, 0x0401, 0x0401, 0 };  // the huge faces: capitals
+		g_glyphRanges.clear();
+		g_fontKey.clear();
+		const std::string own0 = Lang::FontFile(0), own1 = Lang::FontFile(1);
+		auto find = [&](const std::string& a_name) -> std::string {
+			if (a_name.empty()) {
+				return {};
+			}
+			for (const auto& dir : { ours, sys }) {
+				if (std::filesystem::exists(dir + a_name, ec)) {
+					return dir + a_name;
+				}
+			}
+			return std::filesystem::exists(a_name, ec) ? a_name : std::string();
+		};
+		const char* kAsian[] = { "msyh.ttc", "simsun.ttc", "msjh.ttc", "meiryo.ttc", "malgun.ttf", "simhei.ttf" };
 		auto load = [&](const char* a_file, const char* a_fallback, float a_size, const ImWchar* a_ranges = nullptr) -> ImFont* {
 			std::string p = ours + a_file;
 			if (!std::filesystem::exists(p, ec)) {
@@ -3268,10 +3388,67 @@ namespace Game
 					return nullptr;
 				}
 			}
+			const bool  big = a_ranges == kCaps;
+			const bool  bookish = std::string_view(a_fallback).starts_with("georgia");
+			const auto  key = fmt::format("{}@{}", a_file, a_size);
 			ImFontConfig fc;
 			fc.OversampleH = 2;
 			fc.OversampleV = 1;
-			return io.Fonts->AddFontFromFileTTF(p.c_str(), a_size * g_ui, &fc, a_ranges);
+			ImFont* f = io.Fonts->AddFontFromFileTTF(p.c_str(), a_size * g_ui, &fc, a_ranges ? a_ranges : kLatin);
+			if (!f) {
+				return nullptr;
+			}
+			g_fontKey[f] = key;
+			// the rest of the letters: the base set, the translation's (small faces up front, the big ones as needed), and
+			// whatever has been asked for since
+			std::vector<std::uint32_t> more;
+			if (!big && Lang::UsedCodepoints().size() < 4000) {
+				more = Lang::UsedCodepoints();
+			}
+			if (const auto it = g_glyphWanted.find(key); it != g_glyphWanted.end()) {
+				more.insert(more.end(), it->second.begin(), it->second.end());
+			}
+			std::sort(more.begin(), more.end());
+			more.erase(std::unique(more.begin(), more.end()), more.end());
+			auto& r = g_glyphRanges.emplace_back();
+			for (const ImWchar* w = big ? kCaps : kWide; *w; w += 2) {
+				r.push_back(w[0]);
+				r.push_back(w[1]);
+			}
+			for (std::size_t i = 0; i < more.size();) {
+				std::size_t j = i;
+				while (j + 1 < more.size() && more[j + 1] == more[j] + 1) {
+					++j;
+				}
+				if (more[i] <= 0xFFFF) {
+					r.push_back(static_cast<ImWchar>(more[i]));
+					r.push_back(static_cast<ImWchar>((std::min)(more[j], 0xFFFFu)));
+				}
+				i = j + 1;
+			}
+			r.push_back(0);
+			ImFontConfig mc;
+			mc.MergeMode = true;
+			mc.OversampleH = 1;
+			mc.OversampleV = 1;
+			std::vector<std::string> from;
+			if (const auto own = find(bookish ? own1 : own0); !own.empty()) {
+				from.push_back(own);
+			}
+			if (std::filesystem::exists(sys + a_fallback, ec)) {
+				from.push_back(sys + a_fallback);
+			}
+			if (more.size() > 0) {
+				for (const char* a : kAsian) {
+					if (std::filesystem::exists(sys + a, ec)) {
+						from.push_back(sys + a);
+					}
+				}
+			}
+			for (const auto& src : from) {
+				io.Fonts->AddFontFromFileTTF(src.c_str(), a_size * g_ui, &mc, r.data());
+			}
+			return f;
 		};
 		F.sans = load("BarlowCondensed-Medium.ttf", "arialn.ttf", 20.0f);
 		F.sansSemi = load("BarlowCondensed-SemiBold.ttf", "arialnb.ttf", 13.0f);
@@ -3362,7 +3539,7 @@ namespace Game
 			dl->AddCircle(c, r, IM_COL32(0, 0, 0, 140), 48, S(6));
 			dl->PathArcTo(c, r, -1.5707963f, -1.5707963f + 6.2831853f * f, 48);
 			dl->PathStroke(kWhite, 0, S(4));
-			TextC(dl, F.tiny, c.x, c.y + r + S(14), kGrey, "LEAVING THE TABLE", 0.6f, 0.9f);
+			TextC(dl, F.tiny, c.x, c.y + r + S(14), kGrey, Upper(L("$YA_Leaving", "Leaving the table")), 0.6f, 0.9f);
 			if (f >= 1.0f && !g_escLeaving) {
 				g_escLeaving = true;
 				g_escHeldAt = -1.0;
@@ -3399,7 +3576,7 @@ namespace Game
 		if (!Scene::Ready() && g_phase != Phase::Shop && g_phase != Phase::Wager) {
 			// like the game's own loading prompt, bottom right
 			auto*       dl = ImGui::GetForegroundDrawList();
-			const auto  t = std::string("SETTING UP THE TABLE");
+			const auto  t = Upper(L("$YA_SettingUp", "Setting up the table"));
 			const float tw = Measure(F.sans, t, 0.4f);
 			Text(dl, F.sans, ImVec2(W - S(60) - S(30) - tw, H - S(50) - F.sans->FontSize), kGrey, t, 0.4f, 0.9f);
 			const float a = static_cast<float>(Now() * 2.0);

@@ -12,8 +12,11 @@ dice and bet 25 to 100 septims. The game pauses with the world blurred behind th
   - Click a die to keep it on your rack; drag dice back into the cup to roll them again.
   - Click a box on your card to score.  Z: Fus Ro Dah (shouts the dice back into the cup).  Tab or Esc: forfeit.
 
-Cups: score 150, 200, 250 and 300 in a game for the Goblet, the Dwemer Cup, the Silver Goblet and the Golden Goblet.
-Dice: every ten wins, innkeepers have a finer set for sale. Ask any innkeeper "Got any dice for sale?".
+Cups: any cup you carry (tankards, goblets, Dwemer cups, silver chalices) can be your cup at the table.
+Dice: every ten wins, innkeepers have a finer set for sale in their shop.
+
+Languages: English, Russian and Chinese (Simplified) are included and follow the game's language. To translate
+the table into another language, see Translating.txt next to this file: it's one text file, no rebuild needed.
 
 Settings: in game with SKSE Menu Framework (Mod Control Panel > Yacht), or Data\SKSE\Plugins\SkyrimYacht.ini.
 Log: Documents\My Games\Skyrim Special Edition\SKSE\SkyrimYacht.log

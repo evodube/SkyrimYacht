@@ -12,6 +12,7 @@ namespace Game
 	void Tick(float a_dt);     // while a game is open, from its menu (main thread, game paused)
 	void Abort();              // something failed: close the table, refund the wager
 	void SetupUi(float a_screenH);
+	bool GlyphsWanted();       // the table has text its fonts lack the letters for: rebuild them (once)
 	void DrawUi();             // ImGui, inside Present
 
 	// SKSE co-save

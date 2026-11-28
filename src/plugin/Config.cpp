@@ -100,6 +100,8 @@ namespace Config
 		v.effectsVolume = std::clamp(Float("Play", "EffectsVolume", v.effectsVolume), 0.0f, 2.0f);
 		v.debugOverlay = Bool("Debug", "Overlay", v.debugOverlay);
 		v.logInput = Bool("Debug", "LogInput", v.logInput);
+		v.language = Str("Language", "Language", "");
+		v.showKeys = Bool("Language", "ShowKeys", v.showKeys);
 		g_values = v;
 		spdlog::info("Settings: {} table, tilt {} fit {} centre {},{} bets {}-{} reach {}", v.mode == 0 ? "drawn by the mod" : v.mode == 1 ? "item view" : "in the room", v.tiltDeg, v.fitWidth, v.centerX, v.centerY, v.minBet,
 			v.maxBet, v.tableReach);

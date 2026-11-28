@@ -493,6 +493,20 @@ namespace Overlay
 				ImGui_ImplDX11_InvalidateDeviceObjects();
 				spdlog::info("Interface size {:.2f}: fonts rebuilt", want);
 			}
+			// letters the fonts didn't have (a translation, an opponent's name in another script): a moment later, rebuilt
+			static bool s_glyphs = false;
+			static auto s_glyphsAt = now;
+			if (Game::GlyphsWanted() && !s_glyphs) {
+				s_glyphs = true;
+				s_glyphsAt = now;
+			}
+			if (s_glyphs && now - s_glyphsAt > std::chrono::milliseconds(120)) {
+				s_glyphs = false;
+				io.Fonts->Clear();
+				Game::SetupUi(g_screenH.load());
+				ImGui_ImplDX11_InvalidateDeviceObjects();
+				spdlog::info("Fonts rebuilt with new letters");
+			}
 		}
 		ImGui_ImplDX11_NewFrame();
 		ImGui::NewFrame();

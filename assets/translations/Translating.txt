@@ -1,0 +1,165 @@
+SkyrimYacht - translating the table
+
+Everything the table shows comes from one file:
+    Data\Interface\Translations\SkyrimYacht_<LANGUAGE>.txt
+where <LANGUAGE> is the game's own (sLanguage in Skyrim.ini: ENGLISH, RUSSIAN, CHINESE, POLISH, ...).
+To use another file, set  Language = <LANGUAGE>  under [Language] in SkyrimYacht.ini.
+
+To translate:
+ 1. Copy SkyrimYacht_ENGLISH.txt to SkyrimYacht_<LANGUAGE>.txt and translate the text after each tab.
+    Leave the $YA_ key before the tab as it is. Save as UTF-16 LE (as the game's own files) or UTF-8.
+    xTranslator opens these files too.
+ 2. {0}, {1}... are filled in (a name, a number): keep every one, in any order your language needs.
+ 3. A line you leave out stays English, so a translation can be done a bit at a time.
+ 4. Ship it as a small mod with just that file. It keeps working across SkyrimYacht updates; new lines
+    show in English until you add them (the log lists how many lines your file had).
+
+Letters: the table draws Latin (with accents), Greek and Cyrillic out of the box, and any other script
+(Chinese, Japanese, Korean) from Windows' own fonts (Microsoft YaHei, SimSun, Meiryo, Malgun Gothic).
+To use your own font, put a .ttf/.ttc in Data\SKSE\Plugins\SkyrimYacht\Fonts and add to your file:
+    $YA__FontText<tab>yourfont.ttf     (the plain text)
+    $YA__FontBook<tab>yourfont.ttf     (the score cards)
+
+To see which line is which in game, set  ShowKeys = 1  under [Language] in SkyrimYacht.ini:
+the table shows each line's key in place of its text.
+
+The dialogue ("Care for a Yacht game?") and the dice items' names are in SkyrimYacht.esp: translate
+those with xTranslator as for any plugin. The settings page in SKSE Menu Framework is English only.
+
+The lines, and where they show:
+
+$YA_OffTableToast	Off the table! Throw again
+$YA_PayoutWin	You take {0} septims    [the result screen, under the score]
+$YA_NowSelling	Innkeepers now sell {0} dice
+$YA_PayoutDraw	Your {0} septims come back to you    [the result screen, under the score]
+$YA_PayoutLose	{0} keeps your {1} septims    [the result screen, under the score]
+$YA_OppScores	{0} scores {1}: {2}
+$YA_Scratched	Scratched
+$YA_NoRollsToast	No rolls left
+$YA_BoardClear	The board is already clear
+$YA_DiceFirst	Put the dice on the pad in the cup or on the rack first    [a dice set's name, or with Text its description]
+$YA_CupEmpty	The cup is empty
+$YA_NoGold	You don't have that much gold
+$YA_CantAfford	You can't afford those
+$YA_BoughtToast	{0} dice: yours
+$YA_YourOpponent	Your opponent
+$YA_TurnOver	Game over
+$YA_YourTurn	Your turn
+$YA_WagerTop	Wager {0} septims    [the wager screen]
+$YA_HintOpp	{0} is playing    [the help line along the bottom while you play]
+$YA_HintReady	Hold the left button and move to shake the cup. Let go to throw.    [the help line along the bottom while you play]
+$YA_HintShake	Shake it, then let go: it tips the way you last moved.    [the help line along the bottom while you play]
+$YA_HintRolling	Rolling    [the help line along the bottom while you play]
+$YA_HintRedo	Off the table. Throw again.    [the help line along the bottom while you play]
+$YA_HintChoose	Click a die to keep it. Drag dice into the cup to roll again, or pick a box on your card.    [the help line along the bottom while you play]
+$YA_HintNoRolls	No rolls left. Pick a box on your card.    [the help line along the bottom while you play]
+$YA_CardYours	Yours    [the score cards]
+$YA_Record	Record {0}-{1}{2}
+$YA_Drawn	, {0} drawn
+$YA_CardUpper	Upper    [the score cards]
+$YA_CardLower	Lower    [the score cards]
+$YA_CardBonus	Bonus 35 at 63    [the score cards]
+$YA_CardYachtBonus	Yacht bonuses    [the score cards]
+$YA_KeyShout	Fus Ro Dah    [the key bar, bottom right]
+$YA_KeyHelp	How to play    [the key bar, bottom right]
+$YA_KeyMuted	Muted    [the key bar, bottom right]
+$YA_KeySound	Sound    [the key bar, bottom right]
+$YA_KeyForfeit	Forfeit    [the key bar, bottom right]
+$YA_SoundTitle	Sound    [the sound panel]
+$YA_SoundMusic	Music    [the sound panel]
+$YA_SoundDice	Dice & cups    [the sound panel]
+$YA_SoundEffects	Effects    [the sound panel]
+$YA_SoundUnmute	Unmute    [the sound panel]
+$YA_SoundMuteAll	Mute all    [the sound panel]
+$YA_HelpTitle	Yacht    [the How to play box]
+$YA_Help1	Hold the left button and move to lift the cup and shake it. Let go to flick the dice out the way you last moved. A die that leaves the board means throw again.    [the How to play box]
+$YA_Help2	Click a die to set it on the rack. Drag one back into the cup to roll it again. The cup waits until the board is clear.    [the How to play box]
+$YA_Help3	Any cup you carry can be your cup at the table. Every ten wins, innkeepers sell you a finer set of dice.    [the How to play box]
+$YA_LabelCup	CUP    [the cup and dice labels]
+$YA_LabelDice	DICE    [the cup and dice labels]
+$YA_ForfeitAsk	Forfeit this game?    [the forfeit box]
+$YA_ForfeitNote	It counts as a loss. {0} keeps your {1} septims    [the forfeit box]
+$YA_KeepPlaying	Keep playing
+$YA_WagerWith	A game of Yacht with {0}    [the wager screen]
+$YA_WagerNote	Septims wagered. Win and you take {0}    [the wager screen]
+$YA_Purse	Your purse: {0} septims    [the wager screen]
+$YA_PlaceBet	Place bet
+$YA_Leave	Leave
+$YA_ShopStock	{0}'s stock    [the innkeeper's dice shop]
+$YA_ShopTitle	Dice    [the innkeeper's dice shop]
+$YA_ShopPurse	Your purse: {0} septims  -  {1} wins    [the innkeeper's dice shop]
+$YA_ShopInUse	In use    [the innkeeper's dice shop]
+$YA_ShopOwned	Owned    [the innkeeper's dice shop]
+$YA_ShopPrice	{0} septims    [the innkeeper's dice shop]
+$YA_ShopWins	{0} wins    [the innkeeper's dice shop]
+$YA_ShopStarting	Starting dice    [the innkeeper's dice shop]
+$YA_ShopStats	Price  {0}     Wins  {1}    [the innkeeper's dice shop]
+$YA_ShopUse	Use these    [the innkeeper's dice shop]
+$YA_ShopBuy	Buy  {0}    [the innkeeper's dice shop]
+$YA_ShopNoGold	Not enough gold    [the innkeeper's dice shop]
+$YA_ShopAfter	For sale after {0} wins    [the innkeeper's dice shop]
+$YA_ShopYours	The dice you play with    [the innkeeper's dice shop]
+$YA_ShopDone	Done    [the innkeeper's dice shop]
+$YA_OverWin	You win    [the result screen]
+$YA_OverDraw	A draw    [the result screen]
+$YA_OverForfeit	Forfeit    [the result screen]
+$YA_OverLose	You lose    [the result screen]
+$YA_OverTitle	Game over    [the result screen]
+$YA_OverRecord	Your record against {0}: {1}-{2}{3}    [the result screen]
+$YA_OverCup	Your cup: the {0}    [the result screen]
+$YA_Rematch	Rematch
+$YA_BoughtHud	{0} dice: yours. You'll play with them at the next table.
+$YA_Innkeeper	The innkeeper
+$YA_Leaving	Leaving the table
+$YA_SettingUp	Setting up the table
+$YA_Cup_tankard	Tankard    [a cup's name]
+$YA_Cup_bloodtankard	Bloody Tankard    [a cup's name]
+$YA_Cup_glazedcup	Glazed Cup    [a cup's name]
+$YA_Cup_goblet	Glazed Goblet    [a cup's name]
+$YA_Cup_dwemer	Dwemer Cup    [a cup's name]
+$YA_Cup_dwemer2	Ornate Dwemer Cup    [a cup's name]
+$YA_Cup_silver	Silver Goblet    [a cup's name]
+$YA_Cup_silver2	Silver Chalice    [a cup's name]
+$YA_DiceBone	Bone    [a dice set's name, or with Text its description]
+$YA_DiceBoneText	Hand-carved bone. Yellowed, scratched, and dirty in the pips.    [a dice set's name, or with Text its description]
+$YA_DiceIron	Iron    [a dice set's name, or with Text its description]
+$YA_DiceIronText	Hammered iron, pocked and spotted with rust, punched pips.    [a dice set's name, or with Text its description]
+$YA_DiceSteel	Steel    [a dice set's name, or with Text its description]
+$YA_DiceSteelText	Brushed steel with crisp engraved pips.    [a dice set's name, or with Text its description]
+$YA_DiceCorundum	Corundum    [a dice set's name, or with Text its description]
+$YA_DiceCorundumText	Coppery corundum, a little green at the edges.    [a dice set's name, or with Text its description]
+$YA_DiceDwemer	Dwemer    [a dice set's name, or with Text its description]
+$YA_DiceDwemerText	Dwarven bronze with gear-ring pips, green with age.    [a dice set's name, or with Text its description]
+$YA_DiceOrichalcum	Orichalcum    [a dice set's name, or with Text its description]
+$YA_DiceOrichalcumText	Orc-forged orichalcum, dark green-bronze, scored with claw marks.    [a dice set's name, or with Text its description]
+$YA_DiceSilver	Silver    [a dice set's name, or with Text its description]
+$YA_DiceSilverText	Polished silver, tarnished in the corners, black niello pips.    [a dice set's name, or with Text its description]
+$YA_DiceQuicksilver	Quicksilver    [a dice set's name, or with Text its description]
+$YA_DiceQuicksilverText	Mirror-bright quicksilver that looks wet.    [a dice set's name, or with Text its description]
+$YA_DiceMoonstone	Moonstone    [a dice set's name, or with Text its description]
+$YA_DiceMoonstoneText	Pale elven moonstone with fine leaf lines.    [a dice set's name, or with Text its description]
+$YA_DiceGold	Gold    [a dice set's name, or with Text its description]
+$YA_DiceGoldText	Solid gold with garnet pips.    [a dice set's name, or with Text its description]
+$YA_DiceMalachite	Malachite    [a dice set's name, or with Text its description]
+$YA_DiceMalachiteText	Polished glass-green malachite, banded, with white pips.    [a dice set's name, or with Text its description]
+$YA_DiceEbony	Ebony    [a dice set's name, or with Text its description]
+$YA_DiceEbonyText	Black ebony with inlaid gold pips.    [a dice set's name, or with Text its description]
+$YA_DiceStalhrim	Stalhrim    [a dice set's name, or with Text its description]
+$YA_DiceStalhrimText	Enchanted ice from Solstheim. Cold blue, cracked, faintly glowing.    [a dice set's name, or with Text its description]
+$YA_DiceDragonbone	Dragonbone    [a dice set's name, or with Text its description]
+$YA_DiceDragonboneText	Pale dragon bone, fibrous grain, pips stained dark red.    [a dice set's name, or with Text its description]
+$YA_DiceDaedric	Daedric    [a dice set's name, or with Text its description]
+$YA_DiceDaedricText	Black and red, cut with runes, the pips smouldering like coals.    [a dice set's name, or with Text its description]
+$YA_CatOnes	Ones    [a score box on the card]
+$YA_CatTwos	Twos    [a score box on the card]
+$YA_CatThrees	Threes    [a score box on the card]
+$YA_CatFours	Fours    [a score box on the card]
+$YA_CatFives	Fives    [a score box on the card]
+$YA_CatSixes	Sixes    [a score box on the card]
+$YA_CatThreeKind	Three of a Kind    [a score box on the card]
+$YA_CatFourKind	Four of a Kind    [a score box on the card]
+$YA_CatFullHouse	Full House    [a score box on the card]
+$YA_CatSmallStraight	Small Straight    [a score box on the card]
+$YA_CatLargeStraight	Large Straight    [a score box on the card]
+$YA_CatYacht	Yacht    [a score box on the card]
+$YA_CatChance	Chance    [a score box on the card]
