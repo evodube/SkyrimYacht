@@ -514,14 +514,23 @@ namespace Overlay
 		g_uiHover = io.WantCaptureMouse;
 		ImGui::Render();
 
-		Render3D::Draw(sc, g_dev, g_ctx);  // the table, under the interface
-		ID3D11RenderTargetView* rtv = nullptr;
-		g_dev->CreateRenderTargetView(back, nullptr, &rtv);
-		back->Release();
+		// The game's framebuffer target, not the swap chain's back buffer: HDR shader mods (Community/Open Shaders)
+		// point it at their UI texture and rebuild the back buffer from the scene plus that texture at Present, so
+		// anything drawn straight onto the back buffer is overwritten.
+		auto* renderer = RE::BSGraphics::Renderer::GetSingleton();
+		auto* rtv = renderer ? reinterpret_cast<ID3D11RenderTargetView*>(renderer->GetRuntimeData().renderTargets[RE::RENDER_TARGET::kFRAMEBUFFER].RTV) : nullptr;
 		if (rtv) {
+			rtv->AddRef();
+		} else {
+			// Created per frame so we never hold a back-buffer reference across ResizeBuffers.
+			g_dev->CreateRenderTargetView(back, nullptr, &rtv);
+		}
+		if (rtv) {
+			Render3D::Draw(rtv, back, g_dev, g_ctx);  // the table, under the interface
 			g_ctx->OMSetRenderTargets(1, &rtv, nullptr);
 			ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 			rtv->Release();
 		}
+		back->Release();
 	}
 }

@@ -266,6 +266,11 @@ float4 PSBack(FSOut i) : SV_Target
 	c = lerp(float3(l, l, l), c, 0.72) * 0.62;
 	return float4(c, passArgs.z);
 }
+float4 PSDim(FSOut i) : SV_Target
+{
+	// PSBack with no world to blur (an HDR mod's UI layer, laid over the scene by its alpha): only its darkening
+	return float4(0, 0, 0, passArgs.z * (1 - 0.62));
+}
 float3 ACES(float3 c)
 {
 	const float3x3 inM = { 0.59719, 0.07600, 0.02840, 0.35458, 0.90834, 0.13383, 0.04823, 0.01566, 0.83777 };
@@ -303,7 +308,8 @@ float4 PSShout(FSOut i) : SV_Target
 	col.b = texDiffuse.Sample(smpClamp, i.uv - off * 1.22).b;
 	col += float3(0.55, 0.72, 1.0) * band * 0.22 * fade;
 	col = lerp(col, col * float3(0.92, 0.97, 1.08) + 0.02, wake * fade * 0.6);
-	return float4(col, 1);
+	// a UI layer's coverage, bent with it (alpha 1 would cover the world beneath it)
+	return float4(col, texDiffuse.Sample(smpClamp, i.uv - off * 1.1).a);
 }
 float4 PSComposite(FSOut i) : SV_Target
 {
@@ -362,6 +368,7 @@ float4 PSComposite(FSOut i) : SV_Target
 		ID3D11PixelShader*  g_psDown = nullptr;
 		ID3D11PixelShader*  g_psBlur = nullptr;
 		ID3D11PixelShader*  g_psBack = nullptr;
+		ID3D11PixelShader*  g_psDim = nullptr;
 		ID3D11PixelShader*  g_psComposite = nullptr;
 		ID3D11PixelShader*  g_psShout = nullptr;
 		std::vector<char>   g_vsCode;
@@ -441,7 +448,7 @@ float4 PSComposite(FSOut i) : SV_Target
 				return ok;
 			};
 			if (!vs("VSMain", &g_vs, true) || !vs("VSShadow", &g_vsShadow, false) || !vs("VSFull", &g_vsFull, false) || !ps("PSMain", &g_ps) ||
-				!ps("PSDown", &g_psDown) || !ps("PSBlur", &g_psBlur) || !ps("PSBack", &g_psBack) || !ps("PSComposite", &g_psComposite) || !ps("PSShout", &g_psShout)) {
+				!ps("PSDown", &g_psDown) || !ps("PSBlur", &g_psBlur) || !ps("PSBack", &g_psBack) || !ps("PSDim", &g_psDim) || !ps("PSComposite", &g_psComposite) || !ps("PSShout", &g_psShout)) {
 				return false;
 			}
 			auto cb = [&](UINT size, ID3D11Buffer** out) {
@@ -633,7 +640,7 @@ float4 PSComposite(FSOut i) : SV_Target
 				FreeTargets();
 				return false;
 			}
-			spdlog::info("Table renderer: {}x{}, {}x MSAA, back buffer format {}", g_w, g_h, g_msaa, static_cast<int>(a_back.Format));
+			spdlog::info("Table renderer: {}x{}, {}x MSAA, target format {}", g_w, g_h, g_msaa, static_cast<int>(a_back.Format));
 			return true;
 		}
 
@@ -845,10 +852,10 @@ float4 PSComposite(FSOut i) : SV_Target
 		g_frame = Frame{};
 	}
 
-	void Draw(IDXGISwapChain* a_sc, ID3D11Device* a_dev, ID3D11DeviceContext* c)
+	void Draw(ID3D11RenderTargetView* a_target, ID3D11Texture2D* a_backBuffer, ID3D11Device* a_dev, ID3D11DeviceContext* c)
 	{
 		std::lock_guard lk(g_mtx);
-		if (!g_frame.show || g_failed || !a_sc || !a_dev || !c) {
+		if (!g_frame.show || g_failed || !a_target || !a_dev || !c) {
 			return;
 		}
 		if (!g_ready) {
@@ -859,9 +866,22 @@ float4 PSComposite(FSOut i) : SV_Target
 				return;
 			}
 		}
+		ID3D11Resource* res = nullptr;
+		a_target->GetResource(&res);
 		ID3D11Texture2D* back = nullptr;
-		if (FAILED(a_sc->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&back))) || !back) {
+		if (res) {
+			res->QueryInterface(__uuidof(ID3D11Texture2D), reinterpret_cast<void**>(&back));
+			res->Release();
+		}
+		if (!back) {
 			return;
+		}
+		const bool uiLayer = back != a_backBuffer;
+		static int s_uiLayer = -1;
+		if (s_uiLayer != static_cast<int>(uiLayer)) {
+			s_uiLayer = uiLayer;
+			spdlog::info(uiLayer ? "Table renderer: drawing into the HDR mod's UI layer (the world behind is darkened, not blurred)" :
+			                       "Table renderer: drawing onto the frame");
 		}
 		D3D11_TEXTURE2D_DESC bdsc{};
 		back->GetDesc(&bdsc);
@@ -870,15 +890,7 @@ float4 PSComposite(FSOut i) : SV_Target
 			g_failed = true;
 			return;
 		}
-		ID3D11RenderTargetView*        backRTV = nullptr;
-		D3D11_RENDER_TARGET_VIEW_DESC  rvd{};
-		rvd.Format = Typed(bdsc.Format);
-		rvd.ViewDimension = bdsc.SampleDesc.Count > 1 ? D3D11_RTV_DIMENSION_TEXTURE2DMS : D3D11_RTV_DIMENSION_TEXTURE2D;
-		a_dev->CreateRenderTargetView(back, &rvd, &backRTV);
-		if (!backRTV) {
-			back->Release();
-			return;
-		}
+		ID3D11RenderTargetView* backRTV = a_target;
 		Saved saved;
 		saved.Take(c);
 
@@ -893,7 +905,10 @@ float4 PSComposite(FSOut i) : SV_Target
 		c->PSSetSamplers(0, 3, smp);
 
 		// 1. the world behind: blurred and darkened, as Skyrim's menus do
-		if (g_frame.blur > 0.001f && bdsc.SampleDesc.Count == 1) {
+		if (g_frame.blur > 0.001f && uiLayer) {
+			const float b[4] = { 0, 0, g_frame.blur, 0 };
+			FullScreen(c, backRTV, g_w, g_h, g_psDim, nullptr, b, g_bsPremul);
+		} else if (g_frame.blur > 0.001f && bdsc.SampleDesc.Count == 1) {
 			c->CopyResource(g_bg, back);
 			const UINT qw = (std::max)(1u, g_w / 4), qh = (std::max)(1u, g_h / 4);
 			const float down[4] = { 1.0f / g_w, 1.0f / g_h, 0, 0 };
@@ -1074,7 +1089,6 @@ float4 PSComposite(FSOut i) : SV_Target
 		}
 
 		saved.Put(c);
-		backRTV->Release();
 		back->Release();
 	}
 }

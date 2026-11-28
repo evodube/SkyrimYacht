@@ -6,7 +6,8 @@ struct ID3D11Buffer;
 struct ID3D11ShaderResourceView;
 struct ID3D11Device;
 struct ID3D11DeviceContext;
-struct IDXGISwapChain;
+struct ID3D11RenderTargetView;
+struct ID3D11Texture2D;
 
 // The table drawn by us, over the game, as the browser preview draws it: our own camera and lights (a warm key light
 // with soft shadows, a hemisphere fill, a flickering candle), MSAA, filmic tone mapping, and the world behind blurred.
@@ -53,6 +54,8 @@ namespace Render3D
 	void Submit(Frame&& a_frame);  // main thread, every frame the table is open
 	void Clear();                  // the table closed: drop everything (waits for a frame in flight)
 
-	// Render thread (Present), before the interface draws.
-	void Draw(IDXGISwapChain* a_swapChain, ID3D11Device* a_device, ID3D11DeviceContext* a_ctx);
+	// Render thread (Present), before the interface draws into the same target. a_target is the game's framebuffer
+	// target, or the back buffer's when the game has none. When it isn't a_backBuffer (an HDR shader mod's UI texture,
+	// composited over the scene by its alpha), the world isn't in it: the backdrop is then only darkened, not blurred.
+	void Draw(ID3D11RenderTargetView* a_target, ID3D11Texture2D* a_backBuffer, ID3D11Device* a_device, ID3D11DeviceContext* a_ctx);
 }
