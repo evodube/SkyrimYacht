@@ -196,15 +196,24 @@ namespace Overlay
 
 		bool InstallDispatchHook()
 		{
-			// BSInputDeviceManager: the SendEvent call inside the input polling function (SE 67315, AE 68617)
-			REL::Relocation<std::uintptr_t> target{ RELOCATION_ID(67315, 68617), 0x7B };
-			const auto*                     op = reinterpret_cast<const std::uint8_t*>(target.address());
-			if (*op != 0xE8) {
-				spdlog::warn("Input hook: expected a call at {:X}, found {:02X}", target.address(), *op);
-				return false;
+			// BSInputDeviceManager: the call that sends the input events inside the input polling (SE 67315, AE 68617).
+			// It's at +0x7B on SE and AE (+0x81 on VR); +0x81 is tried after it in case a version has it there. Only a
+			// call (E8) is hooked: anything else and input is read through an event sink instead.
+			const std::uintptr_t func = REL::Relocation<std::uintptr_t>{ RELOCATION_ID(67315, 68617) }.address();
+			for (const std::uintptr_t off : { std::uintptr_t{ 0x7B }, std::uintptr_t{ 0x81 } }) {
+				const auto* op = reinterpret_cast<const std::uint8_t*>(func + off);
+				if (*op != 0xE8) {
+					spdlog::info("Input hook: no call at +{:X} ({:02X})", off, *op);
+					continue;
+				}
+				g_origDispatch = reinterpret_cast<DispatchFn>(SKSE::GetTrampoline().write_call<5>(func + off, &DispatchHook));
+				if (g_origDispatch) {
+					spdlog::info("Input hook installed (+{:X})", off);
+					return true;
+				}
 			}
-			g_origDispatch = reinterpret_cast<DispatchFn>(SKSE::GetTrampoline().write_call<5>(target.address(), &DispatchHook));
-			return g_origDispatch != nullptr;
+			spdlog::warn("Input hook: no call where it was expected");
+			return false;
 		}
 
 		bool SafeInstallDispatchHook()
